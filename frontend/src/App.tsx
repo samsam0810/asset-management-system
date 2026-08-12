@@ -1,0 +1,280 @@
+import { useEffect, useState } from "react";
+import type { Asset } from "./types/asset";
+import {
+  getAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+} from "./services/assetService";
+
+
+
+
+
+
+
+function App() {
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+
+
+
+
+
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState("使用中");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+
+
+
+
+
+
+  useEffect(() => {
+    const loadAssets = async () => {
+      try {
+        const data = await getAssets();
+
+
+
+
+
+
+
+        setAssets(data);
+      } catch (error) {
+        console.error(error);
+        setLoadError("Failed to load assets");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+
+
+
+
+
+
+    loadAssets();
+  }, []);
+
+
+
+
+
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+
+
+
+
+    setSubmitError(null);
+
+
+
+
+
+
+    try {
+      if (editingId === null) {
+        await createAsset({ name, status });
+      } else {
+        await updateAsset(editingId, {
+          name,
+          status,
+        });
+      }
+
+
+
+
+
+
+      const data = await getAssets();
+      setAssets(data);
+
+
+
+
+
+
+      setName("");
+      setStatus("使用中");
+      setEditingId(null);
+      setSubmitError(null);
+    } catch (error) {
+      console.error(error);
+      setSubmitError(
+        editingId === null ? "Failed to create asset" : "Failed to update asset"
+      );
+    }
+  };
+
+
+
+
+  const handleEditClick = (asset: Asset) => {
+    setEditingId(asset.id);
+    setName(asset.name);
+    setStatus(asset.status);
+  };
+
+
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setName("");
+    setStatus("使用中");
+    setSubmitError(null);
+  };
+
+
+  const handleDeleteClick = async (assetId: number) => {
+    const confirmed = window.confirm("確定要刪除這個 Asset 嗎？");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteError(null);
+
+    try {
+      await deleteAsset(assetId);
+
+      const data = await getAssets();
+      setAssets(data);
+    } catch (error) {
+      console.error(error);
+      setDeleteError("Failed to delete asset");
+    }
+  };
+
+
+
+
+
+
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+
+
+
+
+
+
+  if (loadError) {
+    return <p>{loadError}</p>;
+  }
+
+
+
+
+
+
+
+  return (
+    <div>
+      <h1>Asset Management System</h1>
+
+
+
+
+
+
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Name"
+        />
+
+
+
+
+
+
+        <select
+          value={status}
+          onChange={(event) => setStatus(event.target.value)}
+        >
+          <option value="使用中">使用中</option>
+          <option value="閒置">閒置</option>
+          <option value="維修中">維修中</option>
+        </select>
+
+
+
+
+
+
+        <button type="submit">
+          {editingId === null ? "新增資產" : "儲存修改"}
+        </button>
+
+
+        {editingId !== null && (
+          <button type="button" onClick={handleCancelEdit}>
+            取消編輯
+          </button>
+        )}
+
+
+
+
+        {submitError && <p>{submitError}</p>}
+      </form>
+
+
+
+      {deleteError && <p>{deleteError}</p>}
+
+
+
+
+
+
+
+      {assets.map((asset) => (
+        <div key={asset.id}>
+          <p>ID: {asset.id}</p>
+          <p>Name: {asset.name}</p>
+          <p>Status: {asset.status}</p>
+
+
+
+          <button onClick={() => handleEditClick(asset)}>
+            {editingId === asset.id ? "編輯中" : "編輯"}
+          </button>
+
+          <button onClick={() => handleDeleteClick(asset.id)}>
+            刪除
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+export default App;
