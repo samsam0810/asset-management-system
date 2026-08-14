@@ -5,87 +5,45 @@ import {
   createAsset,
   updateAsset,
   deleteAsset,
+  NetworkError,
 } from "./services/assetService";
-
-
-
-
-
-
 
 function App() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-
-
-
-
-
   const [name, setName] = useState("");
   const [status, setStatus] = useState("使用中");
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-
-
-
-
-
+  const loadAssets = async () => {
+    try {
+      const data = await getAssets();
+      setAssets(data);
+      setLoadError(null);
+      setSyncError(null);
+    } catch (error) {
+      console.error(error);
+      setLoadError("Failed to load assets");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadAssets = async () => {
-      try {
-        const data = await getAssets();
-
-
-
-
-
-
-
-        setAssets(data);
-      } catch (error) {
-        console.error(error);
-        setLoadError("Failed to load assets");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-
-
-
-
-
-
     loadAssets();
   }, []);
 
-
-
-
-
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-
-
-
-
     setSubmitError(null);
-
-
-
-
-
+    setSyncError(null);
 
     try {
       if (editingId === null) {
@@ -96,34 +54,34 @@ function App() {
           status,
         });
       }
+    } catch (error) {
+      console.error(error);
 
+      if (error instanceof NetworkError) {
+        setSubmitError(error.message);
+      } else {
+        setSubmitError(
+          editingId === null ? "Failed to create asset" : "Failed to update asset"
+        );
+      }
 
+      return;
+    }
 
-
-
-
+    try {
       const data = await getAssets();
       setAssets(data);
-
-
-
-
-
 
       setName("");
       setStatus("使用中");
       setEditingId(null);
       setSubmitError(null);
+      setSyncError(null);
     } catch (error) {
       console.error(error);
-      setSubmitError(
-        editingId === null ? "Failed to create asset" : "Failed to update asset"
-      );
+      setSyncError("Asset saved, but failed to refresh the asset list.");
     }
   };
-
-
-
 
   const handleEditClick = (asset: Asset) => {
     setEditingId(asset.id);
@@ -131,15 +89,13 @@ function App() {
     setStatus(asset.status);
   };
 
-
-
   const handleCancelEdit = () => {
     setEditingId(null);
     setName("");
     setStatus("使用中");
     setSubmitError(null);
+    setSyncError(null);
   };
-
 
   const handleDeleteClick = async (assetId: number) => {
     const confirmed = window.confirm("確定要刪除這個 Asset 嗎？");
@@ -149,52 +105,47 @@ function App() {
     }
 
     setDeleteError(null);
+    setSyncError(null);
 
     try {
       await deleteAsset(assetId);
+    } catch (error) {
+      console.error(error);
 
+      if (error instanceof NetworkError) {
+        setDeleteError(error.message);
+      } else {
+        setDeleteError("Failed to delete asset");
+      }
+
+      return;
+    }
+
+    try {
       const data = await getAssets();
       setAssets(data);
     } catch (error) {
       console.error(error);
-      setDeleteError("Failed to delete asset");
+      setSyncError("Asset deleted, but failed to refresh the asset list.");
     }
   };
-
-
-
-
-
-
 
   if (loading) {
     return <p>Loading...</p>;
   }
 
-
-
-
-
-
-
   if (loadError) {
-    return <p>{loadError}</p>;
+    return (
+      <div>
+        <p>{loadError}</p>
+        <button onClick={loadAssets}>重新載入</button>
+      </div>
+    );
   }
-
-
-
-
-
-
 
   return (
     <div>
       <h1>Asset Management System</h1>
-
-
-
-
-
 
       <form onSubmit={handleSubmit}>
         <input
@@ -203,11 +154,6 @@ function App() {
           onChange={(event) => setName(event.target.value)}
           placeholder="Name"
         />
-
-
-
-
-
 
         <select
           value={status}
@@ -218,15 +164,9 @@ function App() {
           <option value="維修中">維修中</option>
         </select>
 
-
-
-
-
-
         <button type="submit">
           {editingId === null ? "新增資產" : "儲存修改"}
         </button>
-
 
         {editingId !== null && (
           <button type="button" onClick={handleCancelEdit}>
@@ -234,29 +174,25 @@ function App() {
           </button>
         )}
 
-
-
-
         {submitError && <p>{submitError}</p>}
       </form>
 
-
+      {syncError && (
+          <div>
+            <p>{syncError}</p>
+            <button type="button" onClick={loadAssets}>
+              重新載入
+            </button>
+          </div>
+        )}
 
       {deleteError && <p>{deleteError}</p>}
-
-
-
-
-
-
 
       {assets.map((asset) => (
         <div key={asset.id}>
           <p>ID: {asset.id}</p>
           <p>Name: {asset.name}</p>
           <p>Status: {asset.status}</p>
-
-
 
           <button onClick={() => handleEditClick(asset)}>
             {editingId === asset.id ? "編輯中" : "編輯"}
@@ -270,11 +206,5 @@ function App() {
     </div>
   );
 }
-
-
-
-
-
-
 
 export default App;
