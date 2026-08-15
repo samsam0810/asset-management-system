@@ -45,8 +45,21 @@ async function request<T>(
   return data;
 }
 
-export async function getAssets(): Promise<Asset[]> {
-  return request<Asset[]>("/api/assets", undefined, "Failed to load assets");
+export async function getAssets(search?: string, status?: string): Promise<Asset[]> {
+  const params = new URLSearchParams();
+
+  if (search && search.trim()) {
+    params.set("search", search.trim());
+  }
+
+  if (status && status.trim()) {
+    params.set("status", status.trim());
+  }
+
+  const queryString = params.toString();
+  const url = queryString ? `/api/assets?${queryString}` : "/api/assets";
+
+  return request<Asset[]>(url, undefined, "Failed to load assets");
 }
 
 export async function createAsset(

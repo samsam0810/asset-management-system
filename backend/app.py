@@ -40,7 +40,33 @@ with app.app_context():
 @app.route("/api/assets")
 def get_assets():
 
-    assets = Asset.query.all()
+
+
+    # 讀取 Query Parameter，若不存在則為 None
+    search = request.args.get("search")
+    status = request.args.get("status")
+
+
+
+    query = Asset.query
+
+
+
+    # search 存在且去除空白後不為空字串時，才加入篩選條件
+    if search and search.strip():
+        query = query.filter(Asset.name.ilike(f"%{search.strip()}%"))
+
+
+
+    # status 存在且不為空字串時，才加入篩選條件
+    if status and status.strip():
+        query = query.filter(Asset.status == status.strip())
+
+
+
+    assets = query.all()
+
+
 
     return jsonify([
         {

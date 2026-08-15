@@ -22,9 +22,12 @@ function App() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+
   const loadAssets = async () => {
     try {
-      const data = await getAssets();
+      const data = await getAssets(search, filterStatus);
       setAssets(data);
       setLoadError(null);
       setSyncError(null);
@@ -69,7 +72,7 @@ function App() {
     }
 
     try {
-      const data = await getAssets();
+      const data = await getAssets(search, filterStatus);
       setAssets(data);
 
       setName("");
@@ -122,7 +125,7 @@ function App() {
     }
 
     try {
-      const data = await getAssets();
+      const data = await getAssets(search, filterStatus);
       setAssets(data);
     } catch (error) {
       console.error(error);
@@ -178,15 +181,38 @@ function App() {
       </form>
 
       {syncError && (
-          <div>
-            <p>{syncError}</p>
-            <button type="button" onClick={loadAssets}>
-              重新載入
-            </button>
-          </div>
-        )}
+        <div>
+          <p>{syncError}</p>
+          <button type="button" onClick={loadAssets}>
+            重新載入
+          </button>
+        </div>
+      )}
 
       {deleteError && <p>{deleteError}</p>}
+
+      <div>
+        <input
+          type="text"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="搜尋名稱"
+        />
+
+        <select
+          value={filterStatus}
+          onChange={(event) => setFilterStatus(event.target.value)}
+        >
+          <option value="">全部</option>
+          <option value="使用中">使用中</option>
+          <option value="閒置">閒置</option>
+          <option value="維修中">維修中</option>
+        </select>
+
+        <button type="button" onClick={loadAssets}>
+          搜尋
+        </button>
+      </div>
 
       {assets.map((asset) => (
         <div key={asset.id}>
