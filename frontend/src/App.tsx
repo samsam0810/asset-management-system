@@ -5,10 +5,22 @@ import {
   createAsset,
   updateAsset,
   deleteAsset,
+  login,
+  logout,
+  getCurrentUser,
   NetworkError,
+  type User,
 } from "./services/assetService";
 
 function App() {
+  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -40,8 +52,53 @@ function App() {
   };
 
   useEffect(() => {
-    loadAssets();
+    const checkAuth = async () => {
+      try {
+        const data = await getCurrentUser();
+        setCurrentUser(data.user);
+      } catch (error) {
+        console.error(error);
+        setCurrentUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadAssets();
+    }
+  }, [currentUser]);
+
+  const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoginError(null);
+    setLoginLoading(true);
+
+    try {
+      const data = await login(username, password);
+      setCurrentUser(data.user);
+      setPassword("");
+    } catch (error) {
+      console.error(error);
+      setLoginError(error instanceof Error ? error.message : "Failed to login");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setCurrentUser(null);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -133,6 +190,44 @@ function App() {
     }
   };
 
+  if (authLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!currentUser) {
+    return (
+      <div>
+        <h1>Asset Management System</h1>
+
+        <form onSubmit={handleLoginSubmit}>
+          <div>
+            <label>Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+            />
+          </div>
+
+          <div>
+            <label>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+
+          <button type="submit" disabled={loginLoading}>
+            {loginLoading ? "Logging in..." : "Login"}
+          </button>
+
+          {loginError && <p>{loginError}</p>}
+        </form>
+      </div>
+    );
+  }
+
   if (loading) {
     return <p>Loading...</p>;
   }
@@ -149,6 +244,11 @@ function App() {
   return (
     <div>
       <h1>Asset Management System</h1>
+
+      <p>Logged in as: {currentUser.username}</p>
+      <button type="button" onClick={handleLogout}>
+        Logout
+      </button>
 
       <form onSubmit={handleSubmit}>
         <input

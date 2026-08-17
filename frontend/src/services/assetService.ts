@@ -1,5 +1,10 @@
 import type { Asset } from "../types/asset";
 
+export type User = {
+  id: number;
+  username: string;
+};
+
 class NetworkError extends Error {
   constructor(message: string) {
     super(message);
@@ -17,7 +22,10 @@ async function request<T>(
   let response: Response;
 
   try {
-    response = await fetch(url, options);
+    response = await fetch(url, {
+      ...options,
+      credentials: "include",
+    });
   } catch (error) {
     throw new NetworkError("Unable to connect to server");
   }
@@ -104,6 +112,41 @@ export async function deleteAsset(
       method: "DELETE",
     },
     "Failed to delete asset"
+  );
+}
+
+export async function login(
+  username: string,
+  password: string
+): Promise<{ message: string; user: User }> {
+  return request<{ message: string; user: User }>(
+    "/api/login",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    },
+    "Failed to login"
+  );
+}
+
+export async function logout(): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    "/api/logout",
+    {
+      method: "POST",
+    },
+    "Failed to logout"
+  );
+}
+
+export async function getCurrentUser(): Promise<{ user: User }> {
+  return request<{ user: User }>(
+    "/api/auth/me",
+    undefined,
+    "Failed to get current user"
   );
 }
 
